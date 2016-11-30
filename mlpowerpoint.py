@@ -5,6 +5,7 @@ import os
 import tkinter
 from tkinter import filedialog
 from tkinter import constants
+from pptx import Presentation
 
 class Application:
     save_path = ''
