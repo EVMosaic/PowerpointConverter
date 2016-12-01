@@ -33,7 +33,7 @@ class Application:
     def run(self):
         powerpoint = Powerpoint(Application.ppt_path)
         for slide in powerpoint.slides:
-            page = Page(Converter.convert(slide))
+            page = Converter.convert(slide)
             page.save_to_disk()
 
 
@@ -57,19 +57,27 @@ class Converter:
 
     def convert(self, slide):
         slide_type = Powerpoint.get_slide_type(slide)
-        template = templates[slide_type]
+        html = templates[slide_type]
         mapping = mappings[slide_type]
+        page = Page()
 
         for item in mapping:
             element = slide.placeholders[item.idx]
             if element.has_text_frame:
-                template = template.replace(item.template_element, element.text)
+                formatted_text = self.make_tags(element.text, 'p') + '\n'
+                html = html.replace(item.template_element, formatted_text)
             else : # for the time being can reasonably assume this means an image
                    # but should probably figure out a better way to handle this
                 img = element.image
+                page.add_image(img.filename, img.blob)
+                img_src = '<img src="media/%s"></img>' % img.filename
+                html = html.replace(item.template_element, img_src)
 
-        return '<HTML></HTML>'
+        page.build_html(html)
+        return page
 
+    def make_tags(self, text, tag):
+        return '<%s>' % tag + text + '</%s>' % tag
     # A conversion involves extracting information from a slide object and formatting that information
     # for presentation in an HTML document
     # In order to make this conversion you must know both the type of slide you are extracting from
@@ -99,7 +107,7 @@ class Converter:
     # Map = namedtuple('Mapping',  ['slide_element', 'template_element'])
     # The dict will now return a list of Map objects on SlideType lookup
 
-
+# This is slated for deletion since all of this can be done with pptx
 class Slide:
     def __init__(self, name, xml, rel_xml):
         self.name = name
@@ -135,7 +143,7 @@ class Slide:
     def get_image_path(self):
         pass
 
-
+# TODO Start here tomorrow. Work on saving. Then do GUI
 class Page:
     template_head = '''<!DOCTYPE html>
     <html lang="en">
@@ -201,15 +209,22 @@ class Page:
 
     </body>
     </html>'''
-    def __init__(self, formatted_content):
-        self.html = formatted_content
+    def __init__(self):
+        self.html = ''
+        self.images = {}
+
+    def build_html(self, html):
+        self.html = Page.template_head + html + Page.template_tail
+
+    def add_image(self, name, image):
+        self.images[name] = image
 
     def save_to_disk(self):
         #Page.template_head + self.html + Page.template_tail
         pass
 
 
-# Move this into the converter?
+# Move this into the converter? yup delete it now
 class HTMLFormatter:
     def make_tags(self):
         pass
