@@ -31,10 +31,11 @@ class Application:
         Application.save_path = filedialog.askdirectory(**opts)
 
     def run(self):
-        powerpoint = Powerpoint(Application.ppt_path)
-        for slide in powerpoint.slides:
+        self.powerpoint = Powerpoint(Application.ppt_path)
+        for slide in self.powerpoint.slides:
             page = Converter.convert(slide)
             page.save_to_disk()
+
 
 
 class Powerpoint:
@@ -46,6 +47,11 @@ class Powerpoint:
         self.layouts = []
         for i in range(len(self.powerpoint.slide_layouts)):
             self.layouts.append(self.powerpoint.slide_layouts[i])
+
+    def name_slides(self):
+        for slide in self.powerpoint.slides:
+            slide_number = self.powerpoint.slides.index(slide) + 1
+            slide.name = "Slide%02d" % slide_number
 
     def get_slide_type(self, slide):
         return SlideType(self.layouts.index(slide.slide_layout))
@@ -59,7 +65,7 @@ class Converter:
         slide_type = Powerpoint.get_slide_type(slide)
         html = templates[slide_type]
         mapping = mappings[slide_type]
-        page = Page()
+        page = Page(slide.name)
 
         for item in mapping:
             element = slide.placeholders[item.idx]
@@ -209,9 +215,10 @@ class Page:
 
     </body>
     </html>'''
-    def __init__(self):
+    def __init__(self, name):
         self.html = ''
         self.images = {}
+        self.slide_name = name
 
     def build_html(self, html):
         self.html = Page.template_head + html + Page.template_tail
@@ -220,8 +227,21 @@ class Page:
         self.images[name] = image
 
     def save_to_disk(self):
-        #Page.template_head + self.html + Page.template_tail
-        pass
+        base_path = os.path.join(Application.save_path,  self.slide_name)
+        media_path = os.path.join(base_path, 'media')
+        page_name = os.path.join(base_path,  'index.html')
+
+        os.makedirs(base_path, exist_ok=True)
+        os.makedirs(media_path, exist_ok=True)
+
+        with open(page_name, 'w') as new_file
+            new_file.write(self.html)
+
+        for image_name in self.images:
+            image_path = os.path.join(media_path, image_name)
+            with open (image_path, 'wb') as image:
+                image.write(self.images[image_name])
+
 
 
 # Move this into the converter? yup delete it now
