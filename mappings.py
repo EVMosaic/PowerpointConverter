@@ -57,7 +57,7 @@ mappings[SlideType.ImageCarousel] = [Map('Title 1', 0, '{{TITLE}}'),
                                      Map('Picture Placeholder 3', 11, '{{IMAGE2}}'),
                                      Map('Picture Placeholder 4', 12, '{{IMAGE3}}'),
                                      Map('Picture Placeholder 5', 13, '{{IMAGE4}}'),
-                                     Map('Picture Placeholder 6', 15, '{{IMAGE5}}'),
+                                     Map('Picture Placeholder 6', 14, '{{IMAGE5}}'),
                                      Map('Picture Placeholder 7', 15, '{{IMAGE6}}'),
                                      Map('Picture Placeholder 8', 16, '{{IMAGE7}}'),
                                      Map('Picture Placeholder 9', 17, '{{IMAGE8}}')]
@@ -81,7 +81,6 @@ templates = {}
 templates[SlideType.TitleSlide] = """
 <div> {{TITLE}} </div>
 <div> {{SUBTITLE}} </div>
-<div> {{SLIDENUM}} </div>
 """
 templates[SlideType.Blank] = """"""
 templates[SlideType.Table] = """

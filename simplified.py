@@ -170,10 +170,10 @@ class Converter:
                 # but should probably figure out a better way to handle this
                 # this is already broken since tables fail this check
                 img = element.image
-                filename = 'image%d' % image_count
+                filename = 'image%d.%s' % (image_count, img.ext)
                 page.add_image(filename, img.blob)
                 img_src = '"media/%s"' % filename
-                print('adding image at %s ', img_src, ' replacing element ', item.template_element)
+                print('adding image at ', img_src, ' replacing element ', item.template_element)
                 html = html.replace(item.template_element, img_src)
                 image_count += 1
 
