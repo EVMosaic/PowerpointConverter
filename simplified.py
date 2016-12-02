@@ -11,40 +11,42 @@ class Application:
     root = tkinter.Tk()
 
     def __init__(self):
-        pass
+        self.build_gui()
+
+    def build_gui(self):
+        button_opts = {'fill': constants.BOTH, 'padx': 5, 'pady': 5}
+        ppt_button = tkinter.Button(Application.root, text='Select Powerpoint', command=self.set_ppt_path).pack(**button_opts)
+        save_button = tkinter.Button(Application.root, text='Set Save Location', command=self.set_save_path).pack(**button_opts)
+        start_button = tkinter.Button(Application.root, text='Convert', command=self.run).pack(**button_opts)
 
     def set_ppt_path(self):
-        opts = {}
-        opts['parent'] = Application.root
-        opts['title'] = 'Select Powerpoint to Convert'
-        opts['filetypes'] = [('Powerpoint Files', '.pptx')]
-        # hard code this for now for convenience
-        opts['initialdir'] = 'C:/Users/eric_/Desktop/GreenMockups/xmltest/SAFE/'
+        opts = {'parent': Application.root,
+                'title': 'Select Powerpoint to Convert',
+                'filetypes':  [('Powerpoint Files', '.pptx')],
+                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/xmltest/SAFE/'}  # change to C:/
+
         Application.ppt_path = filedialog.askopenfilename(**opts)
 
     def set_save_path(self):
-        opts = {}
-        opts['parent'] = Application.root
-        opts['title'] = 'Select Save Location'
-        # hard code this for now for convenience
-        opts['initialdir'] = 'C:/Users/eric_/Desktop/GreenMockups/xmltest/SAVETEST/'
+        opts = {'parent':  Application.root,
+                'title': 'Select Save Location',
+                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/xmltest/SAVETEST/'}  # change to C:/
+
         Application.save_path = filedialog.askdirectory(**opts)
 
     def run(self):
-        self.powerpoint = Powerpoint(Application.ppt_path)
-        for slide in self.powerpoint.slides:
-            page = Converter.convert(slide)
-            page.save_to_disk()
-
-
+        print('Starting application')
+        powerpoint = Powerpoint(Application.ppt_path)
+        Converter.convert_presentation(powerpoint)
 
 class Powerpoint:
     def __init__(self, ppt_path):
         self.powerpoint = Presentation(ppt_path)
+        self.layouts = []
         self.make_layout_list()
+        self.name_slides()
 
     def make_layout_list(self):
-        self.layouts = []
         for i in range(len(self.powerpoint.slide_layouts)):
             self.layouts.append(self.powerpoint.slide_layouts[i])
 
@@ -57,99 +59,6 @@ class Powerpoint:
         return SlideType(self.layouts.index(slide.slide_layout))
 
 
-class Converter:
-    def __init__(self, slide):
-        pass
-
-    def convert(self, slide):
-        slide_type = Powerpoint.get_slide_type(slide)
-        html = templates[slide_type]
-        mapping = mappings[slide_type]
-        page = Page(slide.name)
-
-        for item in mapping:
-            element = slide.placeholders[item.idx]
-            if element.has_text_frame:
-                formatted_text = self.make_tags(element.text, 'p') + '\n'
-                html = html.replace(item.template_element, formatted_text)
-            else : # for the time being can reasonably assume this means an image
-                   # but should probably figure out a better way to handle this
-                img = element.image
-                page.add_image(img.filename, img.blob)
-                img_src = '<img src="media/%s"></img>' % img.filename
-                html = html.replace(item.template_element, img_src)
-
-        page.build_html(html)
-        return page
-
-    def make_tags(self, text, tag):
-        return '<%s>' % tag + text + '</%s>' % tag
-    # A conversion involves extracting information from a slide object and formatting that information
-    # for presentation in an HTML document
-    # In order to make this conversion you must know both the type of slide you are extracting from
-    # as well as the structure of the template you are formatting for
-    # there should be a one to one mapping between information in the slide and in the template
-    # or in the case of lists (ie, questions, paragpraphs) the ability to format a list and place in
-    # a singular location
-    # a one to one mapping implies concurrent lists or key value pairs would be appropriate to store
-    # the information between the file types
-    # the converter could look in this mapping to find what information to take from the slide type
-    # and where to put it in the HTML
-    #
-    # For instance: A 'Title Only Slide' has only a title named 'Title 1'
-    # The  HTML would have a corresponding '{{TITLE}}' in the template
-    # A mechanism is neccesary to inform the converter to extract 'Title 1' and place it in '{{TITLE}}'
-    # this would need to be dependant on the fact that it was a Title Only slide
-    # Converter would detect type 'Title Only Slide' look up its pattern and recieve a {'Title 1', '{{TITLE}}'}
-    # More complex structures would be returned as {'Title 1' : '{{TITLE}}',
-    # Possible formats, two lists, 2d list, list of tuples, dictionary, objects
-
-    # Working Example: Title Slide has 'Title 1' and 'Subtitle 2'
-    # mappings = {}
-    # mappings[SlideType.TitleSlide] = {'Title 1': '((TITLE}}', 'Subtitle 2' : '{{SUBTITLE}}'}
-    # Conversion object needs to take in a slide and a template and a mapping
-    # Set up instances in own module?
-    # we're going to use namedtuples!
-    # Map = namedtuple('Mapping',  ['slide_element', 'template_element'])
-    # The dict will now return a list of Map objects on SlideType lookup
-
-# This is slated for deletion since all of this can be done with pptx
-class Slide:
-    def __init__(self, name, xml, rel_xml):
-        self.name = name
-        self.xml = xml
-        self.rel_xml = rel_xml
-
-        self.template = ''
-
-        self.title = ''
-        self.content = ''
-        self.image_src = ''
-
-        self.dir_name = ''
-        self.dir_path = ''
-        self.media_path = ''
-        self.file_name = ''
-        self.newfile = ''
-
-    def extract_title(self, title_name):
-        title_block = self.slide.find('.//*[@name="%s"].....' % title_name)
-        title = ''
-        title_text = title_block.findall('.//a:t', namespaces)
-        for item in title_text:
-            title += item.text
-        return title
-
-    def extract_content(self):
-        pass
-
-    def extract_image_id(self):
-        pass
-
-    def get_image_path(self):
-        pass
-
-# TODO Start here tomorrow. Work on saving. Then do GUI
 class Page:
     template_head = '''<!DOCTYPE html>
     <html lang="en">
@@ -215,6 +124,7 @@ class Page:
 
     </body>
     </html>'''
+
     def __init__(self, name):
         self.html = ''
         self.images = {}
@@ -234,20 +144,51 @@ class Page:
         os.makedirs(base_path, exist_ok=True)
         os.makedirs(media_path, exist_ok=True)
 
-        with open(page_name, 'w') as new_file
+        with open(page_name, 'w') as new_file:
             new_file.write(self.html)
 
         for image_name in self.images:
             image_path = os.path.join(media_path, image_name)
-            with open (image_path, 'wb') as image:
+            with open(image_path, 'wb') as image:
                 image.write(self.images[image_name])
+class Converter:
+    @staticmethod
+    def convert_slide(slide, slide_type):
+        print('Starting conversion of ', slide.name)
+        html = templates[slide_type]
+        mapping = mappings[slide_type]
+        page = Page(slide.name)
+        image_count = 0
 
+        for item in mapping:
+            #print('Looking up item.idx: %s item.template_element: %s, item.slide_element: %s' % (item.idx, item.template_element, item.slide_element))
+            element = slide.placeholders[item.idx]
+            if element.has_text_frame:
+                formatted_text = Converter.make_tags(element.text, 'p') + '\n'
+                html = html.replace(item.template_element, formatted_text)
+            else:  # for the time being can reasonably assume this means an image
+                # but should probably figure out a better way to handle this
+                # this is already broken since tables fail this check
+                img = element.image
+                filename = 'image%d' % image_count
+                page.add_image(filename, img.blob)
+                img_src = '"media/%s"' % filename
+                print('adding image at %s ', img_src, ' replacing element ', item.template_element)
+                html = html.replace(item.template_element, img_src)
+                image_count += 1
 
+        page.build_html(html)
+        return page
 
-# Move this into the converter? yup delete it now
-class HTMLFormatter:
-    def make_tags(self):
-        pass
+    @staticmethod
+    def convert_presentation(powerpoint):
+        for slide in powerpoint.powerpoint.slides:
+            page = Converter.convert_slide(slide, powerpoint.get_slide_type(slide))
+            page.save_to_disk()
 
-    def format_content(self):
-        pass
+    @staticmethod
+    def make_tags(text, tag):
+        return '<%s>' % tag + text + '</%s>' % tag
+
+if __name__ == '__main__':
+    app = Application()
