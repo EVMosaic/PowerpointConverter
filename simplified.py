@@ -9,9 +9,11 @@ class Application:
     save_path = ''
     ppt_path = ''
     root = tkinter.Tk()
+    powerpoint = None
 
     def __init__(self):
         self.build_gui()
+        Application.root.mainloop()
 
     def build_gui(self):
         button_opts = {'fill': constants.BOTH, 'padx': 5, 'pady': 5}
@@ -36,8 +38,9 @@ class Application:
 
     def run(self):
         print('Starting application')
-        powerpoint = Powerpoint(Application.ppt_path)
-        Converter.convert_presentation(powerpoint)
+        Application.powerpoint = Powerpoint(Application.ppt_path)
+        Converter.convert_presentation(Application.powerpoint, templates, mappings)
+
 
 class Powerpoint:
     def __init__(self, ppt_path):
@@ -151,12 +154,14 @@ class Page:
             image_path = os.path.join(media_path, image_name)
             with open(image_path, 'wb') as image:
                 image.write(self.images[image_name])
+
+
 class Converter:
     @staticmethod
-    def convert_slide(slide, slide_type):
+    def convert_slide(slide, template, mapping):
         print('Starting conversion of ', slide.name)
-        html = templates[slide_type]
-        mapping = mappings[slide_type]
+        html = template
+        mapping = mapping
         page = Page(slide.name)
         image_count = 0
 
@@ -181,14 +186,18 @@ class Converter:
         return page
 
     @staticmethod
-    def convert_presentation(powerpoint):
+    def convert_presentation(powerpoint, templates, mappings):
         for slide in powerpoint.powerpoint.slides:
-            page = Converter.convert_slide(slide, powerpoint.get_slide_type(slide))
+            slide_type = powerpoint.get_slide_type(slide)
+            template = templates[slide_type]
+            mapping = mappings[slide_type]
+            page = Converter.convert_slide(slide, template, mapping)
             page.save_to_disk()
 
     @staticmethod
     def make_tags(text, tag):
         return '<%s>' % tag + text + '</%s>' % tag
+
 
 if __name__ == '__main__':
     app = Application()
