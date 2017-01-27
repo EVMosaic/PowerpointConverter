@@ -10,6 +10,7 @@ class Application:
     ppt_path = ''
     root = tkinter.Tk()
     powerpoint = None
+    status = tkinter.StringVar()
 
     def __init__(self):
         self.build_gui()
@@ -22,21 +23,25 @@ class Application:
         ppt_button = tkinter.Button(Application.root, text='Select Powerpoint', command=self.set_ppt_path).pack(**button_opts)
         save_button = tkinter.Button(Application.root, text='Set Save Location', command=self.set_save_path).pack(**button_opts)
         start_button = tkinter.Button(Application.root, text='Convert', command=self.run).pack(**button_opts)
+        label = tkinter.Label(Application.root, textvariable=Application.status).pack()
+        Application.status.set('Please Select Powerpoint')
 
     def set_ppt_path(self):
         opts = {'parent': Application.root,
                 'title': 'Select Powerpoint to Convert',
                 'filetypes':  [('Powerpoint Files', '.pptx')],
-                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/xmltest/SAFE/'}  # change to C:/
+                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/Production Tests'}  # change to C:/
 
         Application.ppt_path = filedialog.askopenfilename(**opts)
+        Application.status.set('Powerpoint Loaded')
 
     def set_save_path(self):
         opts = {'parent':  Application.root,
                 'title': 'Select Save Location',
-                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/xmltest/SAVETEST/'}  # change to C:/
+                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/Production Tests/Output'}  # change to C:/
 
         Application.save_path = filedialog.askdirectory(**opts)
+        Application.status.set('Output Set')
 
     def run(self):
         print('Starting application')
@@ -161,6 +166,8 @@ class Page:
 class Converter:
     @staticmethod
     def convert_slide(slide, template, mapping):
+        current_task = 'Starting conversion of ' + slide.name;
+        Application.status.set(current_task)
         print('Starting conversion of ', slide.name)
         html = template
         mapping = mapping
@@ -169,20 +176,26 @@ class Converter:
 
         for item in mapping:
             #print('Looking up item.idx: %s item.template_element: %s, item.slide_element: %s' % (item.idx, item.template_element, item.slide_element))
-            element = slide.placeholders[item.idx]
-            if element.has_text_frame:
-                formatted_text = Converter.make_tags(element.text, 'p') + '\n'
-                html = html.replace(item.template_element, formatted_text)
-            else:  # for the time being can reasonably assume this means an image
-                # but should probably figure out a better way to handle this
-                # this is already broken since tables fail this check
-                img = element.image
-                filename = 'image%d.%s' % (image_count, img.ext)
-                page.add_image(filename, img.blob)
-                img_src = '"media/%s"' % filename
-                print('adding image at ', img_src, ' replacing element ', item.template_element)
-                html = html.replace(item.template_element, img_src)
-                image_count += 1
+            try:
+                element = slide.placeholders[item.idx]
+                if element.has_text_frame:
+                    formatted_text = Converter.make_tags(element.text, 'p') + '\n'
+                    html = html.replace(item.template_element, formatted_text)
+                else:  # for the time being can reasonably assume this means an image
+                    # but should probably figure out a better way to handle this
+                    # this is already broken since tables fail this check
+                    img = element.image
+                    filename = 'image%d.%s' % (image_count, img.ext)
+                    page.add_image(filename, img.blob)
+                    img_src = '"media/%s"' % filename
+                    print('adding image at ', img_src, ' replacing element ', item.template_element)
+                    html = html.replace(item.template_element, img_src)
+                    image_count += 1
+            except:
+                print('encountered error on ', slide.name)
+                error_msg = '</IMG> <h1 style="color:white; background-color:red; padding:20px; text-align:center; font-size:40px; margin:0">' + 'IMAGE OR TEXT NEEDS MANUAL REPLACEMENT' + '</h1>' +  '<h2 style="color:yellow; background-color:red; padding-bottom:20px; text-align:center; font-size:25px; margin:0">' + 'Encountered error on - Slide Element:' + str(item.slide_element) + ' with IDX:' + str(item.idx) + ' for Template Element ' + str(item.template_element) + '</h2>'
+
+                html = html.replace(item.template_element, error_msg)
 
         page.build_html(html)
         return page
@@ -195,6 +208,7 @@ class Converter:
             mapping = mappings[slide_type]
             page = Converter.convert_slide(slide, template, mapping)
             page.save_to_disk()
+        Application.status.set('Finished Conversion')
 
     @staticmethod
     def make_tags(text, tag):
