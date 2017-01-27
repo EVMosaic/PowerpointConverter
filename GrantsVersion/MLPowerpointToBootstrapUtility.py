@@ -16,8 +16,6 @@ class Application:
         Application.root.mainloop()
 
     def build_gui(self):
-        self.root.minsize(300,100)
-        self.root.lift()
         button_opts = {'fill': constants.BOTH, 'padx': 5, 'pady': 5}
         ppt_button = tkinter.Button(Application.root, text='Select Powerpoint', command=self.set_ppt_path).pack(**button_opts)
         save_button = tkinter.Button(Application.root, text='Set Save Location', command=self.set_save_path).pack(**button_opts)
@@ -27,14 +25,14 @@ class Application:
         opts = {'parent': Application.root,
                 'title': 'Select Powerpoint to Convert',
                 'filetypes':  [('Powerpoint Files', '.pptx')],
-                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/xmltest/SAFE/'}  # change to C:/
+                'initialdir': 'C:/'}  # change to C:/
 
         Application.ppt_path = filedialog.askopenfilename(**opts)
 
     def set_save_path(self):
         opts = {'parent':  Application.root,
                 'title': 'Select Save Location',
-                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/xmltest/SAVETEST/'}  # change to C:/
+                'initialdir': 'C:/'}  # change to C:/
 
         Application.save_path = filedialog.askdirectory(**opts)
 
@@ -195,6 +193,7 @@ class Converter:
             mapping = mappings[slide_type]
             page = Converter.convert_slide(slide, template, mapping)
             page.save_to_disk()
+        print('completed convesrion')
 
     @staticmethod
     def make_tags(text, tag):
