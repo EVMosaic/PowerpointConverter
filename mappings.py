@@ -82,7 +82,7 @@ templates[SlideType.TitleSlide] = """
 <div> {{TITLE}} </div>
 <div> {{SUBTITLE}} </div>
 """
-templates[SlideType.Blank] = """"""
+templates[SlideType.Blank] = """<p>THIS PAGE INTENTIONALLY LEFT BLANK</p>"""
 templates[SlideType.Table] = """
 <div> {{TITLE}} </div>
 <div> {{TABLE}} </div>

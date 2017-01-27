@@ -154,7 +154,7 @@ class Page:
         os.makedirs(base_path, exist_ok=True)
         os.makedirs(media_path, exist_ok=True)
 
-        with open(page_name, 'w') as new_file:
+        with open(page_name, 'w', encoding='utf8') as new_file:
             new_file.write(self.html)
 
         for image_name in self.images:
@@ -179,7 +179,8 @@ class Converter:
             try:
                 element = slide.placeholders[item.idx]
                 if element.has_text_frame:
-                    formatted_text = Converter.make_tags(element.text, 'p') + '\n'
+                    formatted_text = Converter.make_tags(Converter.sanitize(element.text), 'p') + '\n'
+                    print(formatted_text)
                     html = html.replace(item.template_element, formatted_text)
                 else:  # for the time being can reasonably assume this means an image
                     # but should probably figure out a better way to handle this
@@ -213,6 +214,16 @@ class Converter:
     @staticmethod
     def make_tags(text, tag):
         return '<%s>' % tag + text + '</%s>' % tag
+
+    @staticmethod
+    def sanitize(text):
+        sani_text = text
+        replacements = {
+                        }
+        for dirty, clean in replacements.items():
+            sani_text = sani_text.replace(dirty, clean)
+
+        return sani_text
 
 
 if __name__ == '__main__':
