@@ -25,7 +25,7 @@ class Application:
         save_button = tkinter.Button(Application.root, text='Set Save Location', command=self.set_save_path).pack(**button_opts)
         start_button = tkinter.Button(Application.root, text='Convert', command=self.run).pack(**button_opts)
         label = tkinter.Label(Application.root, textvariable=Application.status).pack()
-        Application.status.set('Please Select Powerpoint')
+        self.update_status('Please Select Powerpoint')
 
     def set_ppt_path(self):
         opts = {'parent': Application.root,
@@ -34,7 +34,7 @@ class Application:
                 'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/Production Tests'}  # change to C:/
 
         Application.ppt_path = filedialog.askopenfilename(**opts)
-        Application.status.set('Powerpoint Loaded')
+        Application.update_status('Powerpoint Loaded')
 
     def set_save_path(self):
         opts = {'parent':  Application.root,
@@ -43,18 +43,21 @@ class Application:
 
 
         Application.save_path = filedialog.askdirectory(**opts)
-        Application.status.set('Output Set')
+        Application.update_status('Output Set')
 
         Application.js_update = JsUpdater(Application.save_path)
 
 
     def run(self):
         print('Starting application')
+        Application.status.set('')
         Application.powerpoint = Powerpoint(Application.ppt_path)
         Converter.convert_presentation(Application.powerpoint, templates, mappings)
         Application.js_update.save_to_disk()
 
-
+    @staticmethod
+    def update_status(new_status):
+        Application.status.set(Application.status.get() + '\n' + new_status)
 
 class Powerpoint:
     def __init__(self, ppt_path):
@@ -176,7 +179,7 @@ class Converter:
     @staticmethod
     def convert_slide(slide, template, mapping):
         current_task = 'Starting conversion of ' + slide.name;
-        Application.status.set(current_task)
+        Application.update_status(current_task)
         print('Starting conversion of ', slide.name)
         html = template
         mapping = mapping
@@ -203,6 +206,7 @@ class Converter:
                     image_count += 1
             except:
                 print('encountered error on ', slide.name)
+                Application.update_status('[ ENCOUNTERED ERROR ON ' + slide.name.upper() + ' ]')
                 error_msg = '</IMG> <h1 style="color:white; background-color:red; padding:20px; text-align:center; font-size:40px; margin:0">' + 'IMAGE OR TEXT NEEDS MANUAL REPLACEMENT' + '</h1>' +  '<h2 style="color:yellow; background-color:red; padding-bottom:20px; text-align:center; font-size:25px; margin:0">' + 'Encountered error on - Slide Element:' + str(item.slide_element) + ' with IDX:' + str(item.idx) + ' for Template Element ' + str(item.template_element) + '</h2>'
 
                 html = html.replace(item.template_element, error_msg)
@@ -218,7 +222,7 @@ class Converter:
             mapping = mappings[slide_type]
             page = Converter.convert_slide(slide, template, mapping)
             page.save_to_disk()
-        Application.status.set('Finished Conversion')
+        Application.update_status('Finished Conversion')
 
     @staticmethod
     def make_tags(text, tag):
