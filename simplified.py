@@ -11,6 +11,7 @@ class Application:
     root = tkinter.Tk()
     powerpoint = None
     status = tkinter.StringVar()
+    js_update = None
 
     def __init__(self):
         self.build_gui()
@@ -38,21 +39,28 @@ class Application:
     def set_save_path(self):
         opts = {'parent':  Application.root,
                 'title': 'Select Save Location',
-                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/Production Tests/Output'}  # change to C:/
+                'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/eta-sample/eta-sample/pages'}  # change to C:/
+
 
         Application.save_path = filedialog.askdirectory(**opts)
         Application.status.set('Output Set')
+
+        Application.js_update = JsUpdater(Application.save_path)
+
 
     def run(self):
         print('Starting application')
         Application.powerpoint = Powerpoint(Application.ppt_path)
         Converter.convert_presentation(Application.powerpoint, templates, mappings)
+        Application.js_update.save_to_disk()
+
 
 
 class Powerpoint:
     def __init__(self, ppt_path):
         self.powerpoint = Presentation(ppt_path)
         self.layouts = []
+        self.names = []
         self.make_layout_list()
         self.name_slides()
 
@@ -64,6 +72,7 @@ class Powerpoint:
         for slide in self.powerpoint.slides:
             slide_number = self.powerpoint.slides.index(slide) + 1
             slide.name = "Slide%02d" % slide_number
+            self.names.append(slide.name)
 
     def get_slide_type(self, slide):
         return SlideType(self.layouts.index(slide.slide_layout))
@@ -224,6 +233,32 @@ class Converter:
             sani_text = sani_text.replace(dirty, clean)
 
         return sani_text
+
+class JsUpdater:
+
+    def __init__(self, save_path):
+        self.path = os.path.normpath(os.path.join(save_path, os.path.pardir, 'js', 'main.js' ))
+
+    def make_comment(self, comment):
+        return "/*==================================================\n" + comment + "\n==================================================*/\n"
+
+    def make_pages_list(self, pages):
+        pages_list = "const pages = ["
+        for page in pages:
+            pages_list += '\n    "pages/{}/index.html,"'.format(page)
+        pages_list += "\n];\n"
+        return pages_list
+
+    def save_to_disk(self):
+        main_js = open(self.path)
+        template = main_js.read()
+        main_js.close()
+        start = template.find('const pages = [')
+        end = template.find(']', start) + 3
+        updated = template.replace(template[start:end], self.make_pages_list(Application.powerpoint.names))
+
+        with open(self.path, 'w', encoding='utf8') as main_js:
+            main_js.write(updated)
 
 
 if __name__ == '__main__':
