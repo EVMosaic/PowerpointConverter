@@ -6,6 +6,12 @@ from pptx import Presentation
 from mappings import templates, mappings, SlideType
 
 class Application:
+    """
+    Root level application. Holds neccessary vars for entire program and
+    hooks everything together.
+    """
+    #Looking back at this I'm not sure why I went with class level vars
+    #instead of object level vars...this seems funky to me for some reason
     save_path = ''
     ppt_path = ''
     root = tkinter.Tk()
@@ -18,6 +24,7 @@ class Application:
         Application.root.mainloop()
 
     def build_gui(self):
+        """Build GUI, attach buttons and methods"""
         self.root.minsize(300,100)
         self.root.lift()
         button_opts = {'fill': constants.BOTH, 'padx': 5, 'pady': 5}
@@ -28,6 +35,7 @@ class Application:
         self.update_status('Please Select Powerpoint')
 
     def set_ppt_path(self):
+        """Get file location of powerpoint to be converted"""
         opts = {'parent': Application.root,
                 'title': 'Select Powerpoint to Convert',
                 'filetypes':  [('Powerpoint Files', '.pptx')],
@@ -37,6 +45,11 @@ class Application:
         Application.update_status('Powerpoint Loaded')
 
     def set_save_path(self):
+        """
+        Get file location of pages output. Currently expected to be in a folder with a
+        bootstrap project. Pages folder should be on same level as js folder and index.html
+        for the site.
+        """
         opts = {'parent':  Application.root,
                 'title': 'Select Save Location',
                 'initialdir': 'C:/Users/eric_/Desktop/GreenMockups/eta-sample/eta-sample/pages'}  # change to C:/
@@ -49,6 +62,9 @@ class Application:
 
 
     def run(self):
+        """
+        Start the conversion.
+        """
         print('Starting application')
         Application.status.set('')
         Application.powerpoint = Powerpoint(Application.ppt_path)
@@ -57,9 +73,17 @@ class Application:
 
     @staticmethod
     def update_status(new_status):
+        """
+        Append status to the GUI. Temp method, but eliminates the need for the console
+        as feedback.
+        """
         Application.status.set(Application.status.get() + '\n' + new_status)
 
 class Powerpoint:
+    """
+    Powerpoint object. Essentially a wrapper for the pptx object,
+    with some accesability features
+    """
     def __init__(self, ppt_path):
         self.powerpoint = Presentation(ppt_path)
         self.layouts = []
@@ -68,20 +92,24 @@ class Powerpoint:
         self.name_slides()
 
     def make_layout_list(self):
+        """Create list of template types from preset slide layouts"""
         for i in range(len(self.powerpoint.slide_layouts)):
             self.layouts.append(self.powerpoint.slide_layouts[i])
 
     def name_slides(self):
+        """Give each slide a formatted slide name based on index and add to names list"""
         for slide in self.powerpoint.slides:
             slide_number = self.powerpoint.slides.index(slide) + 1
             slide.name = "Slide%02d" % slide_number
             self.names.append(slide.name)
 
     def get_slide_type(self, slide):
+        """Return template that slide was created from"""
         return SlideType(self.layouts.index(slide.slide_layout))
 
 
 class Page:
+    """HTML Page object. Builds HTML and saves to disk"""
     template_head = '''<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -153,12 +181,18 @@ class Page:
         self.slide_name = name
 
     def build_html(self, html):
+        """Construct HTML Page from template and inserted html"""
         self.html = Page.template_head + html + Page.template_tail
 
     def add_image(self, name, image):
+        """Add image to page dict"""
         self.images[name] = image
 
     def save_to_disk(self):
+        """
+        Save constructed HTML page to disk. Saves in self contained directory
+        with media folder for images.
+        """
         base_path = os.path.join(Application.save_path,  self.slide_name)
         media_path = os.path.join(base_path, 'media')
         page_name = os.path.join(base_path,  'index.html')
@@ -176,8 +210,11 @@ class Page:
 
 
 class Converter:
+    """Conversion object handles conversion of powerpoint objects into html objects"""
+    #I'm not sure why these are all static methods....
     @staticmethod
     def convert_slide(slide, template, mapping):
+        """Convert slide into HTML"""
         current_task = 'Starting conversion of ' + slide.name;
         Application.update_status(current_task)
         print('Starting conversion of ', slide.name)
@@ -187,7 +224,9 @@ class Converter:
         image_count = 0
 
         for item in mapping:
-            #print('Looking up item.idx: %s item.template_element: %s, item.slide_element: %s' % (item.idx, item.template_element, item.slide_element))
+            #currently cause of failures appears to be failure to find item.idx
+            #this triggers the exception and logs it to the status as well as
+            #inserts it into the HTML to indicate manual attention is required
             try:
                 element = slide.placeholders[item.idx]
                 if element.has_text_frame:
@@ -197,6 +236,7 @@ class Converter:
                 else:  # for the time being can reasonably assume this means an image
                     # but should probably figure out a better way to handle this
                     # this is already broken since tables fail this check
+                    # videos also do not work
                     img = element.image
                     filename = 'image%d.%s' % (image_count, img.ext)
                     page.add_image(filename, img.blob)
@@ -216,6 +256,7 @@ class Converter:
 
     @staticmethod
     def convert_presentation(powerpoint, templates, mappings):
+        """Convert entire powerpoint presentation"""
         for slide in powerpoint.powerpoint.slides:
             slide_type = powerpoint.get_slide_type(slide)
             template = templates[slide_type]
@@ -226,10 +267,15 @@ class Converter:
 
     @staticmethod
     def make_tags(text, tag):
+        """Return formated HTML tag of type tag"""
         return '<%s>' % tag + text + '</%s>' % tag
 
     @staticmethod
     def sanitize(text):
+        """
+        Sanitize text for placement in HTML.
+        Currently unused, but set up to replace keys in replacements with values
+        """
         sani_text = text
         replacements = {
                         }
@@ -239,14 +285,16 @@ class Converter:
         return sani_text
 
 class JsUpdater:
-
+    """Update main.js file to include list of newly generated slides"""
     def __init__(self, save_path):
         self.path = os.path.normpath(os.path.join(save_path, os.path.pardir, 'js', 'main.js' ))
 
     def make_comment(self, comment):
+        """Return = delimited comments that are easy to see in final output"""
         return "/*==================================================\n" + comment + "\n==================================================*/\n"
 
     def make_pages_list(self, pages):
+        """Return js formatted string containing list of converted pages locations"""
         pages_list = "const pages = ["
         for page in pages:
             pages_list += '\n    "pages/{}/index.html,"'.format(page)
@@ -254,6 +302,7 @@ class JsUpdater:
         return pages_list
 
     def save_to_disk(self):
+        """Save updated main.js file by replacing existing pages const  with newly formatted one"""
         main_js = open(self.path)
         template = main_js.read()
         main_js.close()
